@@ -38,41 +38,75 @@ const updatePropertyDetails = async (req, res) => {
 };
 
 
-const storage = multer.diskStorage({
-  destination: "./uploads",
-  filename: function (req, file, cb) {
-    cb(null, file.originalname);
-  },
-});
 
-const upload = multer({
-  storage: storage,
-}).single("image");
+const storage = multer.memoryStorage();
+const upload = multer({ storage }).single("image");
 
+// const storage = multer.diskStorage({
+//   destination: "./uploads",
+//   filename: function (req, file, cb) {
+//     cb(null, file.originalname);
+//   },
+// });
+
+// const upload = multer({
+//   storage: storage,
+// }).single("image");
+
+//for live
 const addPropertyWithFile = async (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
-      res.status(500).json({
-        message: err.message,
-      });
-    } else {
-      const cloundinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(
-        req.file
-      );
-      console.log(cloundinaryResponse);
-      console.log(req.body);
+      return res.status(500).json({ message: err.message });
+    }
 
-      //store data in database
-      req.body.propertyURL = cloundinaryResponse.secure_url;
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    try {
+      // Upload from buffer instead of file path
+      const cloudinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(req.file.buffer);
+
+      req.body.propertyURL = cloudinaryResponse.secure_url;
       const savedProperty = await propertyModel.create(req.body);
 
       res.status(200).json({
         message: "Property added successfully",
         data: savedProperty,
       });
+    } catch (uploadErr) {
+      console.error("Cloudinary upload error:", uploadErr);
+      res.status(500).json({ message: "File upload failed", error: uploadErr.message });
     }
   });
 };
+
+
+// const addPropertyWithFile = async (req, res) => {
+//   upload(req, res, async (err) => {
+//     if (err) {
+//       res.status(500).json({
+//         message: err.message,
+//       });
+//     } else {
+//       const cloundinaryResponse = await cloudinaryUtil.uploadFileToCloudinary(
+//         req.file
+//       );
+//       console.log(cloundinaryResponse);
+//       console.log(req.body);
+
+//       //store data in database
+//       req.body.propertyURL = cloundinaryResponse.secure_url;
+//       const savedProperty = await propertyModel.create(req.body);
+
+//       res.status(200).json({
+//         message: "Property added successfully",
+//         data: savedProperty,
+//       });
+//     }
+//   });
+// };
 
 // const addProperty = async (req, res) => {
 //   try {
