@@ -91,7 +91,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app); // HTTP + Socket.IO server
+const server = http.createServer(app);
 
 // Middleware
 app.use(express.json());
@@ -101,54 +101,45 @@ app.use(cors({
   credentials: true
 }));
 
-// Socket.IO setup
-const io = new Server(server, {
-  cors: {
-    origin: "https://vehicle-vault-frontend.vercel.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
-  }
-});
+// Routes imports
+const roleRoutes = require("./src/routes/RoleRoutes");
+const userRoutes = require("./src/routes/UserRoutes");
+const stateRoutes = require("./src/routes/StateRoutes");
+const cityRoutes = require("./src/routes/CityRoutes");
+const areaRoutes = require("./src/routes/AreaRoutes");
+const propertyRoutes = require("./src/routes/PropertyRoutes");
+const bookingRoutes = require("./src/routes/BookingRoutes");
+const reviewRoutes = require("./src/routes/ReviewRoutes");
+const messageRoutes = require("./src/routes/MessageRoutes");
+const reportRoutes = require("./src/routes/ReportRoutes");
+const notificationsRoutes = require("./src/routes/NotificationRoutes");
 
-// Routes
+// Use routes
+app.use(roleRoutes);
+app.use(userRoutes);
+app.use("/state", stateRoutes);
+app.use("/city", cityRoutes);
+app.use("/area", areaRoutes);
+app.use("/property", propertyRoutes);
+app.use("/booking", bookingRoutes);
+app.use("/review", reviewRoutes);
+app.use("/messages", messageRoutes);
+app.use("/report", reportRoutes);
+app.use("/notifications", notificationsRoutes);
+
+// Basic root route
 app.get("/", (req, res) => {
   res.send("Socket.IO server is running...");
 });
 
-const roleRoutes = require("./src/routes/RoleRoutes");
-app.use(roleRoutes);
+// Socket.IO setup
+const io = new Server(server, {
+  cors: {
+    origin: "https://stay-sphere-gray.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  }
+});
 
-const userRoutes = require("./src/routes/UserRoutes");
-app.use(userRoutes);
-
-const stateRoutes = require("./src/routes/StateRoutes");
-app.use("/state", stateRoutes);
-
-const cityRoutes = require("./src/routes/CityRoutes");
-app.use("/city", cityRoutes);
-
-const areaRoutes = require("./src/routes/AreaRoutes");
-app.use("/area", areaRoutes);
-
-const propertyRoutes = require("./src/routes/PropertyRoutes");
-app.use("/property", propertyRoutes);
-
-const bookingRoutes = require("./src/routes/BookingRoutes");
-app.use("/booking", bookingRoutes);
-
-const reviewRoutes = require("./src/routes/ReviewRoutes");
-app.use("/review", reviewRoutes);
-
-const messageRoutes = require("./src/routes/MessageRoutes");
-app.use("/messages", messageRoutes);
-
-const reportRoutes = require("./src/routes/ReportRoutes");
-app.use("/report", reportRoutes);
-
-const notificationsRoutes = require("./src/routes/NotificationRoutes");
-app.use("/notifications", notificationsRoutes);
-
-
-// Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -161,12 +152,35 @@ io.on("connection", (socket) => {
   });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+// Connect to MongoDB with options
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => console.log("Database connected..."))
   .catch(err => console.error("MongoDB connection error:", err));
 
-// Start server with Socket.IO
-server.listen(process.env.PORT, () => {
-  console.log(`Server Started On Port: ${process.env.PORT}`);
+// Error handling middleware (for debugging)
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Internal Server Error");
 });
+
+// Use process.env.PORT with fallback for local testing
+const PORT = process.env.PORT || 3002;
+
+server.listen(PORT, () => {
+  console.log(`Server started on port: ${PORT}`);
+});
+
+/*
+IMPORTANT:
+- If you are using bcrypt, switch to bcryptjs to avoid native binary errors on Vercel:
+    npm uninstall bcrypt
+    npm install bcryptjs
+  Then update your auth code imports:
+    const bcrypt = require('bcryptjs');
+
+- Vercel serverless functions are NOT ideal for persistent Socket.IO servers.
+  For production with sockets, consider using dedicated Node.js hosting like Heroku, Railway, or DigitalOcean.
+*/
