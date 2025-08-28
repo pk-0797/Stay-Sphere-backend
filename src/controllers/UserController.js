@@ -190,28 +190,101 @@ const removeFromWishlist = async (req, res) => {
   }
 };
 
+// const forgotPassword = async (req, res) => {
+//   const email = req.body.email;
+//   const foundUser = await userModel.findOne({ email: email });
+//   console.log(email);
+//   if (foundUser) {
+//     const token = jwt.sign(foundUser.toObject(), secret);
+//     console.log(token);
+//     const url = `http://stay-sphere-gray.vercel.app/resetpassword/${token}`;
+//     const mailContent = `<html>
+//                           <a href ="${url}">rest password</a>
+//                           </html>`;
+//     //email...
+//     await mailUtil.sendingMail(foundUser.email, "reset password", mailContent);
+//     res.json({
+//       message: "reset password link sent to mail.",
+//     });
+//   } else {
+//     res.json({
+//       message: "user not found register first..",
+//     });
+//   }
+// };
 const forgotPassword = async (req, res) => {
-  const email = req.body.email;
-  const foundUser = await userModel.findOne({ email: email });
-  console.log(email);
-  if (foundUser) {
-    const token = jwt.sign(foundUser.toObject(), secret);
-    console.log(token);
-    const url = `http://localhost:5173/resetpassword/${token}`;
-    const mailContent = `<html>
-                          <a href ="${url}">rest password</a>
-                          </html>`;
-    //email...
-    await mailUtil.sendingMail(foundUser.email, "reset password", mailContent);
-    res.json({
-      message: "reset password link sent to mail.",
-    });
-  } else {
-    res.json({
-      message: "user not found register first..",
+  try {
+    const email = req.body.email;
+    const foundUser = await userModel.findOne({ email });
+
+    if (foundUser) {
+      // Create token (better: include only userId instead of whole object)
+      const token = jwt.sign(
+        { id: foundUser._id, email: foundUser.email },
+        secret,
+        { expiresIn: "1h" } // optional expiry for security
+      );
+
+      // Live link with reset token
+      const url = `https://stay-sphere-gray.vercel.app/resetpassword/${token}`;
+
+      // Mail content (styled HTML)
+      const mailContent = `
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+            <h2 style="color:#4CAF50;">Stay Sphere - Password Reset</h2>
+            <p>Hello <b>${foundUser.name || "User"}</b>,</p>
+            <p>You recently requested to reset your password for your Stay Sphere account. 
+            Click the button below to reset it:</p>
+            
+            <p style="text-align:center;">
+              <a href="${url}" 
+                 style="display:inline-block; padding:12px 20px; 
+                        background-color:#4CAF50; color:#fff; 
+                        text-decoration:none; border-radius:6px;">
+                Reset Password
+              </a>
+            </p>
+
+            <p>If the button above doesn’t work, copy and paste the following link into your browser:</p>
+            <p><a href="${url}">${url}</a></p>
+
+            <p>This link will expire in <b>1 hour</b> for security reasons.</p>
+            <p>If you did not request a password reset, please ignore this email or contact support.</p>
+
+            <br/>
+            <p>Thanks,</p>
+            <p><b>The Stay Sphere Team</b></p>
+          </body>
+        </html>
+      `;
+
+      // Send mail
+      await mailUtil.sendingMail(
+        foundUser.email,
+        "Reset Your Stay Sphere Password",
+        mailContent
+      );
+
+      res.json({
+        success: true,
+        message: "Password reset link has been sent to your email.",
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "User not found. Please register first.",
+      });
+    }
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong. Please try again later.",
     });
   }
 };
+
 
 const resetpassword = async (req, res) => {
   try {
