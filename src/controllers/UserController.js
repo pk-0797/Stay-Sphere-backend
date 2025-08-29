@@ -233,7 +233,7 @@ const forgotPassword = async (req, res) => {
         <html>
           <body style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
             <h2 style="color:#4CAF50;">Stay Sphere - Password Reset</h2>
-            <p>Hello <b>${foundUser.name || "User"}</b>,</p>
+            <p>Hello <b>${foundUser.fullName || "User"}</b>,</p>
             <p>You recently requested to reset your password for your Stay Sphere account. 
             Click the button below to reset it:</p>
             
