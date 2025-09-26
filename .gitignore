@@ -4,4 +4,4 @@
 # Node modules
 node_modules/
 
-src/utils
+src/utils/
